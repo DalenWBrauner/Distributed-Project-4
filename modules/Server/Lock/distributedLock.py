@@ -86,10 +86,11 @@ class DistributedLock(object):
         function is called.
 
         """
+        print("distributedLock.initialize()")
         #
         # Your code here.
         #
-        pass
+        
 
     def destroy(self):
         """ The object is being destroyed.
@@ -98,55 +99,58 @@ class DistributedLock(object):
         give it to someone else.
 
         """
+        print("distributedLock.destroy()")
         #
         # Your code here.
         #
-        pass
+        
 
     def register_peer(self, pid):
         """Called when a new peer joins the system."""
+        print("distributedLock.register_peer({})".format(pid))
         #
         # Your code here.
         #
-        pass
+        
 
     def unregister_peer(self, pid):
         """Called when a peer leaves the system."""
+        print("distributedLock.unregister_peer({})".format(pid))
         #
         # Your code here.
         #
-        pass
+        
 
     def acquire(self):
         """Called when this object tries to acquire the lock."""
+        print("distributedLock.acquire()".format())
         print("Trying to acquire the lock...")
         #
         # Your code here.
         #
-        pass
 
     def release(self):
         """Called when this object releases the lock."""
+        print("distributedLock.release()".format())
         print("Releasing the lock...")
         #
         # Your code here.
         #
-        pass
 
     def request_token(self, time, pid):
         """Called when some other object requests the token from us."""
+        print("distributedLock.request_token({}, {})".format(time, pid))
         #
         # Your code here.
         #
-        pass
 
     def obtain_token(self, token):
         """Called when some other object is giving us the token."""
+        print("distributedLock.obtain_token({})".format(token))
         print("Receiving the token...")
         #
         # Your code here.
         #
-        pass
 
     def display_status(self):
         """Print the status of this peer."""
