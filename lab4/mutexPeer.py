@@ -25,33 +25,8 @@ from Server.peerList import PeerList
 from Server.Lock.distributedLock import DistributedLock
 
 # -----------------------------------------------------------------------------
-# Initialize and read the command line arguments
-# -----------------------------------------------------------------------------
-
-rand = random.Random()
-rand.seed()
-description = """Peer with access to a mutual exclusive component."""
-parser = argparse.ArgumentParser(description=description)
-parser.add_argument(
-    "-p", "--port", metavar="PORT", dest="port", type=int,
-    default=rand.randint(1, 10000) + 40000, choices=range(40001, 50000),
-    help="Set the port to listen to. Must be in the range 40001 .. 50000. "
-         "The default value is chosen at random."
-)
-parser.add_argument(
-    "-t", "--type", metavar="TYPE", dest="type", default=object_type,
-    help="Set the type of the client."
-)
-opts = parser.parse_args()
-
-local_port = opts.port
-client_type = opts.type
-assert client_type != "object", "Change the object type to something unique!"
-
-# -----------------------------------------------------------------------------
 # Auxiliary classes
 # -----------------------------------------------------------------------------
-
 
 class Client(orb.Peer):
 
@@ -97,14 +72,68 @@ class Client(orb.Peer):
         self.peer_list.unregister_peer(pid)
         self.distributed_lock.unregister_peer(pid)
 
+
+# -----------------------------------------------------------------------------
+# Initialize and read the command line arguments
+# -----------------------------------------------------------------------------
+
+def main():
+    rand = random.Random()
+    rand.seed()
+    description = """Peer with access to a mutual exclusive component."""
+    parser = argparse.ArgumentParser(description=description)
+    parser.add_argument(
+        "-p", "--port", metavar="PORT", dest="port", type=int,
+        default=rand.randint(1, 10000) + 40000, choices=range(40001, 50000),
+        help="Set the port to listen to. Must be in the range 40001 .. 50000. "
+             "The default value is chosen at random."
+    )
+    parser.add_argument(
+        "-t", "--type", metavar="TYPE", dest="type", default=object_type,
+        help="Set the type of the client."
+    )
+    opts = parser.parse_args()
+
+    local_port = opts.port
+    client_type = opts.type
+    assert client_type != "object", "Change the object type to something unique!"
+
+    # Initialize the client object.
+    local_address = (socket.gethostname(), local_port)
+    p = Client(local_address, name_service_address, client_type)
+
+
 # -----------------------------------------------------------------------------
 # The main program
 # -----------------------------------------------------------------------------
 
-# Initialize the client object.
-local_address = (socket.gethostname(), local_port)
-p = Client(local_address, name_service_address, client_type)
+    command = ""
+    cursor = "{}({}):{}> ".format(p.type, p.id, "RELEASED")
+    menu()
+    while command != "q":
+        try:
+            sys.stdout.write(cursor)
+            command = input()
+            if command == "l":
+                p.display_peers()
+            elif command == "s":
+                p.display_status()
+            elif command == "a":
+                p.acquire()
+                cursor = "{}({}):{}> ".format(p.type, p.id, "LOCKED")
+            elif command == "r":
+                p.release()
+                cursor = "{}({}):{}> ".format(p.type, p.id, "RELEASED")
+            elif command == "h":
+                menu()
+        except KeyboardInterrupt:
+            break
+        except Exception as e:
+            # Catch all errors to keep on running in spite of all errors.
+            print("An error has occurred: {}.".format(e))
 
+    # Kill our peer object.
+    p.destroy()
 
 def menu():
     print("""\
@@ -117,30 +146,4 @@ Choose one of the following commands:
     q  ::  exit.\
 """)
 
-command = ""
-cursor = "{}({}):{}> ".format(p.type, p.id, "RELEASED")
-menu()
-while command != "q":
-    try:
-        sys.stdout.write(cursor)
-        command = input()
-        if command == "l":
-            p.display_peers()
-        elif command == "s":
-            p.display_status()
-        elif command == "a":
-            p.acquire()
-            cursor = "{}({}):{}> ".format(p.type, p.id, "LOCKED")
-        elif command == "r":
-            p.release()
-            cursor = "{}({}):{}> ".format(p.type, p.id, "RELEASED")
-        elif command == "h":
-            menu()
-    except KeyboardInterrupt:
-        break
-    except Exception as e:
-        # Catch all errors to keep on running in spite of all errors.
-        print("An error has occurred: {}.".format(e))
-
-# Kill our peer object.
-p.destroy()
+if __name__ == "__main__": main()
