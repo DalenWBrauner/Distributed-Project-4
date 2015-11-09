@@ -19,45 +19,17 @@ import sys
 import random
 import socket
 import argparse
-
 sys.path.append("../modules")
 from Common import orb
 from Common.nameServiceLocation import name_service_address
 from Common.objectType import object_type
-
 from Server.peerList import PeerList
-
-# -----------------------------------------------------------------------------
-# Initialize and read the command line arguments
-# -----------------------------------------------------------------------------
-
-rand = random.Random()
-rand.seed()
-description = """Chat peer."""
-parser = argparse.ArgumentParser(description=description)
-parser.add_argument(
-    "-p", "--port", metavar="PORT", dest="port", type=int,
-    default=rand.randint(1, 10000) + 40000, choices=range(40001, 50000),
-    help="Set the port to listen to. Must be in the range 40001 .. 50000."
-         "The default value is chosen at random."
-)
-parser.add_argument(
-    "-t", "--type", metavar="TYPE", dest="type", default=object_type,
-    help="Set the type of the client."
-)
-opts = parser.parse_args()
-
-local_port = opts.port
-client_type = opts.type
-assert client_type != "object", "Change the object type to something unique!"
 
 # -----------------------------------------------------------------------------
 # Auxiliary classes
 # -----------------------------------------------------------------------------
 
-
 class Client(orb.Peer):
-
     """Chat client class."""
 
     def __init__(self, local_address, ns_address, client_type):
@@ -96,14 +68,63 @@ class Client(orb.Peer):
             print(("Cannot send messages to {}."
                    "Make sure it is in the list of peers.").format(to_id))
 
+def main():
+# -----------------------------------------------------------------------------
+# Initialize and read the command line arguments
+# -----------------------------------------------------------------------------
+
+    rand = random.Random()
+    rand.seed()
+    description = """Chat peer."""
+    parser = argparse.ArgumentParser(description=description)
+    parser.add_argument(
+        "-p", "--port", metavar="PORT", dest="port", type=int,
+        default=rand.randint(1, 10000) + 40000, choices=range(40001, 50000),
+        help="Set the port to listen to. Must be in the range 40001 .. 50000."
+             "The default value is chosen at random."
+    )
+    parser.add_argument(
+        "-t", "--type", metavar="TYPE", dest="type", default=object_type,
+        help="Set the type of the client."
+    )
+    opts = parser.parse_args()
+
+    local_port = opts.port
+    client_type = opts.type
+    assert client_type != "object", "Change the object type to something unique!"
+
 # -----------------------------------------------------------------------------
 # The main program
 # -----------------------------------------------------------------------------
 
-# Initialize the client object.
-local_address = (socket.gethostname(), local_port)
-p = Client(local_address, name_service_address, client_type)
+    # Initialize the client object.
+    local_address = (socket.gethostname(), local_port)
+    p = Client(local_address, name_service_address, client_type)
 
+    command = ""
+    cursor = "{}({})> ".format(p.type, p.id)
+    menu()
+    while command != "q":
+        try:
+            sys.stdout.write(cursor)
+            command = input()
+            if command == "l":
+                p.display_peers()
+            elif command == "h":
+                menu()
+            else:
+                pos = command.find(":")
+                if pos > -1 and command[0:pos].strip().isdigit():
+                    # We have a command to send a message to someone.
+                    to_id = int(command[0:pos])
+                    msg = command[pos + 1:]
+                    p.send_message(to_id, msg)
+        except KeyboardInterrupt:
+            break
+
+    # Should we slap this in a finally block?
+    # Kill our peer object.
+    p.destroy()
 
 def menu():
     print("""\
@@ -114,27 +135,4 @@ Choose one of the following commands:
     q                       ::  exit.\
 """)
 
-command = ""
-cursor = "{}({})> ".format(p.type, p.id)
-menu()
-while command != "q":
-    try:
-        sys.stdout.write(cursor)
-        command = input()
-        if command == "l":
-            p.display_peers()
-        elif command == "h":
-            menu()
-        else:
-            pos = command.find(":")
-            if pos > -1 and command[0:pos].strip().isdigit():
-                # We have a command to send a message to someone.
-                to_id = int(command[0:pos])
-                msg = command[pos + 1:]
-                p.send_message(to_id, msg)
-    except KeyboardInterrupt:
-        break
-
-# Should we slap this in a finally block?
-# Kill our peer object.
-p.destroy()
+if __name__ == "__main__": main()

@@ -34,6 +34,18 @@ logging.basicConfig(format="%(levelname)s:%(filename)s: %(message)s", level=logg
 
 class NameServer(object):
     """Class that handles peers."""
+
+    # The dictionary self.peers assigns a set to each object type
+    # This set contains tuples that represent the peers of that type
+    # The tuple is of the id of that peer and their address (id, addr)
+
+    # So for example, self.peers could look like this:
+
+    # obj_type (key)    | peers (entry)
+    # ------------------+------------------------------------------------------
+    # [obj0]            | [ (0, addr0), (3, addr3) ]
+    # [obj1]            | [ (1, addr1), (4, addr4), (5, addr5) ]
+    # [obj2]            | [ (2, addr2) ]
     
     def __init__(self):
         self.lock = ReadWriteLock()
@@ -80,10 +92,14 @@ class NameServer(object):
                           .format((obj_id,obj_type,obj_hash)))
         self.lock.write_release()
         logging.info("NameServer done unregistering peer at {}".format(tuple(obj_hash)))
+	# This function doesn't stop until every peer has been checked.
+        # BUT there's a peer out there waiting for this function to return
+        # Before it can be unregistered.
+        # This is very obnoxious.
         self._check_all_alive(obj_type) # Make sure everyone in our group is still alive
         return "null"
     
-    def require_all(self, obj_type):
+    def get_peers(self, obj_type):
         return list(self._get_group(obj_type))
     
     def _get_group(self, obj_type):
@@ -116,7 +132,7 @@ class NameServer(object):
             group.remove(t)
             self.lock.write_release()
 
-    def get_line(self, conn, peer, obj_type):
+    def _get_line(self, conn, peer, obj_type):
         result = False
         try:
             expected = [peer[0], obj_type]
@@ -142,7 +158,7 @@ class NameServer(object):
         try:
             parent_conn, child_conn = multiprocessing.Pipe(duplex=False)
             p = multiprocessing.Process(
-                target=self.get_line,
+                target=self._get_line,
                 args=(child_conn, peer, obj_type)
             )
             p.daemon = True
