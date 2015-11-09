@@ -1,0 +1,70 @@
+Second RA algorth is token-based.
+
+	Token is initially assigned to a random process.
+	To get the token, a process P_i sends a request with (T(P_i),i) to all other processes.
+
+	When P_i leaves critical section it passes token to the first (clockwise from i) process that has requested it.
+	If no request, P_i keeps the token until requested.
+
+	On getting the token, P_i sets token.lastHeldBy[i] = T(P_i).
+
+	When P_i gets a request from P_j, P_i records the timestamp T(P_j).
+	If P_i.requestTimes[j] > token.lastHeldBy[j], then we have a pending request from j.
+
+
+So, each node P_i must keep track of the following information:
+	* Its ID, i
+	* Its current logical time, T(P_i)
+	* Whether or not it has the token
+	* An array or other data structure containing time stamps of most recent request from each other node
+	and the standard RMI stuff:
+		* Stubs for other peers
+
+and each node needs the following functions:
+
+def performCriticalSection(self):
+	self.enter()
+
+	# CS code
+
+	self.exit()
+
+def enter(self):
+	for peer in self.peers:
+		peer.request((self.id,self.time))
+	
+	# Wait for skeleton to get the token
+	block UNTIL self.token
+
+	# sanity check
+	if not self.token:
+		throw Exception("enter passed with no token",self.id)
+
+	self.token.lastHeldBy[self.id] = self.time
+
+
+def request(self,(id,timeStamp)):
+	self.mostRecentRequestFrom[id] = timeStamp
+	if self.token:
+		self.sendTokenTo(id)
+
+
+def exit(self):
+	# sanity check
+	if not self.token:
+		throw Exception("exit called with no token",self.id)
+
+	checkList = range(self.id,N)+range(0,self.id)
+
+	for j in checkList:
+		if self.mostRecentRequestFrom[j] > self.token.timeLastHeldBy[j]:
+			self.sendTokenTo(id)
+			break
+
+def sendTokenTo(self,id):
+	# sanity check
+	if not self.token:
+		throw Exception("sendTokenTo called with no token",self.id)
+	token = self.token
+	self.token = None
+	self.peers[i].sendToken(token)
