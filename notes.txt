@@ -1,3 +1,6 @@
+Based on:
+	https://www.ida.liu.se/~TDDB37/lecture-notes/lect6-7.frm.pdf
+
 Second RA algorth is token-based.
 
 	Token is initially assigned to a random process.
