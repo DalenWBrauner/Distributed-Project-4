@@ -30,7 +30,7 @@ server_address = nameServiceLocation.name_service_address
 # Auxiliary classes
 # -----------------------------------------------------------------------------
 
-logging.basicConfig(format="%(levelname)s:%(filename)s: %(message)s", level=logging.DEBUG)
+logging.basicConfig(format="%(levelname)s:%(filename)s: %(message)s", level=logging.INFO)
 
 class NameServer(object):
     """Class that handles peers."""
@@ -136,7 +136,7 @@ class NameServer(object):
         result = False
         try:
             expected = [peer[0], obj_type]
-            response = Stub(peer[1]).check()
+            response = Stub(peer[1]).isAlive()
             result = (response == expected)
             logging.debug("NameServer received response {} from peer {}".format(response, peer))
             if result is True:

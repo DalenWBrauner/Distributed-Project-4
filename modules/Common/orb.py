@@ -255,7 +255,7 @@ class Peer(object):
         self.name_service.unregister(self.id, self.type, self.hash)
         logging.debug("Peer unregistered from name service")
 
-    def check(self):
+    def isAlive(self):
         """Checking to see if the object is still alive."""
-        logging.info("Name server is checking me; I am responding with {}".format((self.id, self.type)))
+        logging.debug("Someone wants to know I'm still alive. Responding with {}".format((self.id, self.type)))
         return (self.id, self.type)
