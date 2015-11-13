@@ -100,6 +100,7 @@ class DistributedLock(object):
 
         """
         print("distributedLock.destroy()")
+        print("I'm leaving...")
         #
         # Your code here.
         #
@@ -108,6 +109,7 @@ class DistributedLock(object):
     def register_peer(self, pid):
         """Called when a new peer joins the system."""
         print("distributedLock.register_peer({})".format(pid))
+        print("Someone's connecting...")
         #
         # Your code here.
         #
@@ -116,6 +118,7 @@ class DistributedLock(object):
     def unregister_peer(self, pid):
         """Called when a peer leaves the system."""
         print("distributedLock.unregister_peer({})".format(pid))
+        print("Someone's leaving...")
         #
         # Your code here.
         #
@@ -140,6 +143,7 @@ class DistributedLock(object):
     def request_token(self, time, pid):
         """Called when some other object requests the token from us."""
         print("distributedLock.request_token({}, {})".format(time, pid))
+        print("Someone's asking us for the token...")
         #
         # Your code here.
         #
