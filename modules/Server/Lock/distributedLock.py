@@ -93,7 +93,11 @@ class DistributedLock(object):
         """
         print("distributedLock.initialize()")
 
-        # Initialize the token
+        # Initialize ourselves
+        self.token[self.owner.id] = 0
+        self.request[self.owner.id] = 0
+
+        # Initialize our peers
         peerIDs = self.peer_list.get_peers().keys()
         for ID in peerIDs:
             self.token[ID] = 0
