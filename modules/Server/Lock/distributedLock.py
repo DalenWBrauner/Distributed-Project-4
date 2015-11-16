@@ -143,7 +143,7 @@ class DistributedLock(object):
         for peer in self.peer_list.get_peers().values():
             peer.request_token(self.time,self.owner.id)
 
-        print "acquire() has received acknowledgements from all peers"
+        print("acquire() has received acknowledgements from all peers")
 
         # If we acquired the token while requesting, this will pass immediately
         while self.state == NO_TOKEN:
