@@ -204,13 +204,13 @@ class DistributedLock(object):
 
         # If we don't have the token or we are using it right now, we can just stop here
         if self.state == TOKEN_PRESENT:
-            peer_ids = request.keys()
+            peer_ids = self.request.keys()
             gt = sorted([pid for pid in peer_ids if pid > self.owner.id])
             lt = sorted([pid for pid in peer_ids if pid < self.owner.id])
 
             # Check each peer in clockwise order to see if anyone wants the token
             for pid in gt + lt:
-                if pid in token and self.requests[pid] > self.token[pid]:
+                if pid in self.token and self.request[pid] > self.token[pid]:
                     targetID = pid
                     break
 
