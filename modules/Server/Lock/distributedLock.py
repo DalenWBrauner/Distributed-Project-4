@@ -59,7 +59,7 @@ class DistributedLock(object):
         self.owner = owner
         self.time = 0
         self.token = None
-        self.request = {}
+        self.requests = {}
         self.state = NO_TOKEN
         self.localLock = Lock()
 
@@ -171,9 +171,9 @@ class DistributedLock(object):
         print("distributedLock.request_token({}, {})".format(time, pid))
 
         # Update this client's last-requested timestamp for the other client
-        self.request[pid]=time
+        self.requests[pid]=time
 
-        if self.state == TOKEN_PRESENT and self.token[pid] < self.request[pid]:
+        if self.state == TOKEN_PRESENT and self.token[pid] < self.requests[pid]:
             # Safely initiate token transfer
 
             self._check_token()
@@ -213,13 +213,13 @@ class DistributedLock(object):
 
         # If we don't have the token or we are using it right now, we can just stop here
         if self.state == TOKEN_PRESENT:
-            peer_ids = request.keys()
+            peer_ids = self.requests.keys()
             gt = sorted([pid for pid in peer_ids if pid > self.owner.id])
             lt = sorted([pid for pid in peer_ids if pid < self.owner.id])
 
             # Check each peer in clockwise order to see if anyone wants the token
             for pid in gt + lt:
-                if pid in token and self.requests[pid] > self.token[pid]:
+                if pid in self.token and self.requests[pid] > self.token[pid]:
                     targetID = pid
                     break
 
