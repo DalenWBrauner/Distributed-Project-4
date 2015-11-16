@@ -98,6 +98,10 @@ class DistributedLock(object):
             self.token[ID] = 0
             self.request[ID] = 0
 
+        # If I don't have any peers, spawn with a token!
+        if len(peerIDs) == 0:
+            self.state = TOKEN_PRESENT
+
     def destroy(self):
         """ The object is being destroyed.
 
@@ -106,9 +110,7 @@ class DistributedLock(object):
 
         """
         print("distributedLock.destroy()")
-        #
-        # Your code here.
-        #
+        self._check_token(True)
         
 
     def register_peer(self, pID):
