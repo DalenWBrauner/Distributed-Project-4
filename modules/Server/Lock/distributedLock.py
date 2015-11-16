@@ -123,39 +123,112 @@ class DistributedLock(object):
         #
         # Your code here.
         #
-        
+
+
+    """
+        Acquisition scheme:
+            Request token from all registered peers.
+                In this RMI framework, peers will respond with an acknowledgement
+                message regardless of whether they have the token.
+                    If no ack is received within a timeout period, there should be
+                    some exception handling.
+            Wait for a peer to send the token using our obtain_token() method.
+    """
 
     def acquire(self):
         """Called when this object tries to acquire the lock."""
         print("distributedLock.acquire()".format())
         print("Trying to acquire the lock...")
-        #
-        # Your code here.
-        #
+
+        # Increment our local timer
+        self.time+=1
+
+        for peer in self.owner.peer_list.values():
+            peer.request_token(self.time,self.owner.id)
+
+        # If we acquired the token while requesting, this will pass immediately
+        while self.state == NO_TOKEN:
+            time.sleep(1)
+
 
     def release(self):
         """Called when this object releases the lock."""
         print("distributedLock.release()".format())
         print("Releasing the lock...")
-        #
-        # Your code here.
-        #
+        
+        self.state = TOKEN_PRESENT
+
+        # Safely initiate token transfer if possible
+        self._check_token()
+
 
     def request_token(self, time, pid):
         """Called when some other object requests the token from us."""
         print("distributedLock.request_token({}, {})".format(time, pid))
-        print("Someone's asking us for the token...")
-        #
-        # Your code here.
-        #
+
+        # Update this client's last-requested timestamp for the other client
+        self.request[pid]=time
+
+        if self.state == TOKEN_PRESENT and self.token[pid] < self.request[pid]:
+            # Safely initiate token transfer
+
+            self._check_token()
+            
+            # Note that we are not necessarily going to send the token to the peer
+            # that just requested it.
+
+        return "{} acknowledging request from {}".format(self.owner.id,pid)
+
 
     def obtain_token(self, token):
         """Called when some other object is giving us the token."""
         print("distributedLock.obtain_token({})".format(token))
         print("Receiving the token...")
-        #
-        # Your code here.
-        #
+
+        if self.state is not NO_TOKEN:
+            print "WARNING: peer {} has received a token when it already had one".format(self.owner.id)
+        
+        self.token = token
+
+        # Update the token's last-held timestamp for this client
+        self.token[self.owner.id] = self.time # TODO make sure time is increasing
+
+        self.state = TOKEN_HELD
+
+
+    def _check_token(self):
+        """Called when this object checks its set of token requests in order
+        to find a peer that should get the token"""
+        print("distributedLock._check_token()")
+
+        # Use Python's built-in locking (like Java's semaphore) to prevent
+        # more than one of these checks from being run concurrently
+        self.localLock.acquire()
+
+        targetID = None
+
+        # If we don't have the token or we are using it right now, we can just stop here
+        if self.state == TOKEN_PRESENT and self.token[pid] < self.request[pid]:
+            peer_ids = request.keys()
+            gt = sorted([pid for pid in peer_ids if pid > self.owner.id])
+            lt = sorted([pid for pid in peer_ids if pid < self.owner.id])
+
+            # Check each peer in clockwise order to see if anyone wants the token
+            for pid in gt + lt:
+                if pid in token and self.requests[pid] > self.token[pid]:
+                    targetID = pid
+                    break
+
+        if targetID is not None:
+            try:
+                self.state = NO_TOKEN
+                self.owner.peer_list[pid].obtain_token(self.token)
+            except Exception as e:
+                print "ERROR: Could not send token to pid",pid
+                print e
+
+        self.localLock.release()
+
 
     def display_status(self):
         """Print the status of this peer."""
