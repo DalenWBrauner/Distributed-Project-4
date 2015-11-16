@@ -62,7 +62,9 @@ class PeerList(object):
         # Then register itself with each peer registered
         for peer_tuple in peer_set:
             peer_id, peer_addr = peer_tuple
-            self.register_peer(peer_id, peer_addr, False)
+            self.register_peer(peer_id, peer_addr,
+            # We're just spawning, we don't need to check if they've died
+                               False) 
             self.peers[peer_id].register_peer(self.owner.id, self.owner.address)
 
     def destroy(self):
@@ -80,9 +82,9 @@ class PeerList(object):
         finally:
             self.lock.release()
 
-    def register_peer(self, pid, paddr, doubleCheck=True):
+    def register_peer(self, pid, paddr, doubleChecking=True):
         """Register a new peer joining the network."""
-        if doubleCheck:
+        if doubleChecking:
             self.check_all_alive()
 
         # Synchronize access to the peer list as several peers might call
@@ -124,7 +126,7 @@ class PeerList(object):
         finally:
             self.lock.release()
 
-    def peer(self, pid):
+    def get_peer(self, pid):
         """Return the object with the given id."""
 
         self.lock.acquire()
@@ -142,7 +144,16 @@ class PeerList(object):
         finally:
             self.lock.release()
 
+    def check_alive(self, pID):
+        """ Checks whether a peer has disconnected without telling us. """
+        logging.debug("PeerList confirming connections to Peer {}.".format(pID))
+        alive = orb.checkLiveness(pID, self.get_peer(pID), self.owner.type)
+        if not alive:
+            logging.debug("Confirmed {} is not alive.".format(pID))
+            self.unregister_peer(pID)
+
     def check_all_alive(self):
+        """ Checks whether any peer has disconnected without telling us. """
         logging.debug("PeerList confirming connections to all peers.")
         allPeers = self.get_peers()
         myself = self.owner.id
