@@ -20,7 +20,7 @@ class PeerList(object):
     def __init__(self, owner):
         self.owner = owner
         self.lock = threading.Condition()
-        self.peers = {}
+        self.peers = {} # ID -> STUB
 
     # Public methods
 
@@ -63,12 +63,14 @@ class PeerList(object):
 
     def destroy(self):
         """Unregister this peer from all others in the list."""
+        print("{}.destory()".format(self.owner.id))
 
         self.lock.acquire()
         try:
             myself = self.owner.id
             # Ask all the other peers to deregister us
             for fellowPeer in self.peers.keys():
+                print("for {} in self.peers.keys()".format(fellowPeer))
                 if fellowPeer != myself:
                     self.peers[fellowPeer].unregister_peer(self.owner.id)
         finally:
@@ -90,6 +92,7 @@ class PeerList(object):
         """Unregister a peer leaving the network."""
         # Synchronize access to the peer list as several peers might call
         # this method in parallel.
+        print("{}.unregister_peer({})".format(self.owner.id,pid))
 
         self.lock.acquire()
         try:

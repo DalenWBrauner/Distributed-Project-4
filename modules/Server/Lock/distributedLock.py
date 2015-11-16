@@ -87,9 +87,10 @@ class DistributedLock(object):
 
         """
         print("distributedLock.initialize()")
-        #
-        # Your code here.
-        #
+##        self.token = dict()
+##        peerIDs = self.peer_list.get_peers().keys()
+##        for ID in peerIDs:
+##            self.token[ID] = 0
         
 
     def destroy(self):

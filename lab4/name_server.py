@@ -123,7 +123,7 @@ class NameServer(object):
             self._check_alive(obj_type, peer)
     
     def _check_alive(self, obj_type, peer):
-        logging.info("NameServer confirming connection to peer {}.".format(peer[0]))
+        logging.debug("NameServer confirming connection to peer {}.".format(peer[0]))
         if not self._is_alive(obj_type, peer, 5):
             t = peer
             group = self._get_group(obj_type)
@@ -131,28 +131,6 @@ class NameServer(object):
             logging.info("Removing peer {}.".format(t))
             group.remove(t)
             self.lock.write_release()
-
-    def _get_line(self, conn, peer, obj_type):
-        result = False
-        try:
-            expected = [peer[0], obj_type]
-            response = Stub(peer[1]).isAlive()
-            result = (response == expected)
-            logging.debug("NameServer received response {} from peer {}".format(response, peer))
-            if result is True:
-                logging.debug("This was the expected response.")
-            else:
-                logging.debug("This was not the expected response.\n Expected response: {}"
-                              .format(expected))
-        except ConnectionRefusedError:
-            logging.info("Peer {} refused connection".format(peer))
-            result = False
-        except:
-            err = sys.exc_info()
-            logging.debug("NameServer encountered an error trying to check if peer {} is still alive:\n{}: {}"
-                         .format(peer, err[0], err[1]))
-        finally:
-            conn.send(result)
     
     def _is_alive(self, obj_type, peer, timeout=5):
         try:
@@ -177,6 +155,28 @@ class NameServer(object):
             logging.debug("NameServer encountered an error while spawning a process to check if peer {} is still alive:\n{}: {}"
                           .format(peer, err[0], err[1]))
             return False
+
+    def _get_line(self, conn, peer, obj_type):
+        result = False
+        try:
+            expected = [peer[0], obj_type]
+            response = Stub(peer[1]).isAlive()
+            result = (response == expected)
+            logging.debug("NameServer received response {} from peer {}".format(response, peer))
+            if result is True:
+                logging.debug("This was the expected response.")
+            else:
+                logging.debug("This was not the expected response.\n Expected response: {}"
+                              .format(expected))
+        except ConnectionRefusedError:
+            logging.info("Peer {} refused connection".format(peer))
+            result = False
+        except:
+            err = sys.exc_info()
+            logging.debug("NameServer encountered an error trying to check if peer {} is still alive:\n{}: {}"
+                         .format(peer, err[0], err[1]))
+        finally:
+            conn.send(result)
 
 # -----------------------------------------------------------------------------
 # The main program

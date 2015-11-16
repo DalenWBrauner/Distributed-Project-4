@@ -256,6 +256,6 @@ class Peer(object):
         logging.debug("Peer unregistered from name service")
 
     def isAlive(self):
-        """Checking to see if the object is still alive."""
+        """Someone is checking to see if I'm still alive."""
         logging.debug("Someone wants to know I'm still alive. Responding with {}".format((self.id, self.type)))
         return (self.id, self.type)
