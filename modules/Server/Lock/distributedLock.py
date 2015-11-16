@@ -140,7 +140,7 @@ class DistributedLock(object):
         # Increment our local timer
         self.time+=1
 
-        for peer in self.peer_list.get_peers():
+        for peer in self.peer_list.get_peers().values():
             peer.request_token(self.time,self.owner.id)
 
         # If we acquired the token while requesting, this will pass immediately
@@ -217,7 +217,7 @@ class DistributedLock(object):
         if targetID is not None:
             try:
                 self.state = NO_TOKEN
-                self.owner.peer_list[pid].obtain_token(self.token)
+                self.peer_list.get_peers()[pid].obtain_token(self.token)
             except Exception as e:
                 print("ERROR: Could not send token to pid",pid)
                 print(e)
