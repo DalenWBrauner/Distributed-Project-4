@@ -28,6 +28,8 @@ The implementation should satisfy the following requests:
 
 """
 
+from threading import Lock
+
 NO_TOKEN = 0
 TOKEN_PRESENT = 1
 TOKEN_HELD = 2
@@ -58,6 +60,7 @@ class DistributedLock(object):
         self.token = None
         self.request = {}
         self.state = NO_TOKEN
+        self.localLock = Lock()
 
     def _prepare(self, token):
         """Prepare the token to be sent as a JSON message.
@@ -143,7 +146,7 @@ class DistributedLock(object):
         # Increment our local timer
         self.time+=1
 
-        for peer in self.owner.peer_list.values():
+        for peer in self.peer_list.get_peers():
             peer.request_token(self.time,self.owner.id)
 
         # If we acquired the token while requesting, this will pass immediately
@@ -229,10 +232,9 @@ class DistributedLock(object):
 
         self.localLock.release()
 
-
     def display_status(self):
         """Print the status of this peer."""
-        self.peer_list.lock.acquire()
+        self.localLock.acquire()
         try:
             nt = self.state == NO_TOKEN
             tp = self.state == TOKEN_PRESENT
@@ -244,4 +246,4 @@ class DistributedLock(object):
             print("Token   :: {0}".format(self.token))
             print("Time    :: {0}".format(self.time))
         finally:
-            self.peer_list.lock.release()
+            self.localLock.release()

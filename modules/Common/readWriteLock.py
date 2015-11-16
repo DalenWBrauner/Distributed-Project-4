@@ -9,8 +9,7 @@
 
 """Class implementing a readers-writers lock."""
 
-import threading
-
+from threading import Lock
 
 class ReadWriteLock(object):
 
@@ -29,8 +28,8 @@ class ReadWriteLock(object):
 
     def __init__(self):
         self.reader_count = 0
-        self.reader_lock = threading.Lock()
-        self.writer_lock = threading.Lock()
+        self.reader_lock = Lock()
+        self.writer_lock = Lock()
 
     # Public methods
 
