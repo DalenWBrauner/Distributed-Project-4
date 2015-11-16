@@ -30,6 +30,7 @@ The implementation should satisfy the following requests:
 
 from threading import Lock
 import time
+from collection import Counter
 
 NO_TOKEN = 0
 TOKEN_PRESENT = 1
@@ -58,7 +59,7 @@ class DistributedLock(object):
         self.peer_list = peer_list
         self.owner = owner
         self.time = 0
-        self.token = dict()
+        self.token = counter()
         self.request = dict()
         self.state = NO_TOKEN
         self.localLock = Lock()
@@ -74,7 +75,7 @@ class DistributedLock(object):
 
     def _unprepare(self, token):
         """The reverse operation to the one above."""
-        return dict(token)
+        return counter(token)
 
     # Public methods
 
@@ -206,6 +207,15 @@ class DistributedLock(object):
         if not tokenWasWanted:
             self.release()
 
+    def _clean_token(self):
+        """Called when sending a token to clear out old records from peers that are no longer"""
+        print("distributedLoc._clean_token()")
+        self.peer_list.lock.acquire()
+        for pid in self.token:
+            if pid not in self.peer_list.get_peers():
+                del self.token[pid]
+        self.peer_list.lock.release()
+
 
     def _check_token(self,force=False):
         """Called when this object checks its set of token requests in order
@@ -242,6 +252,7 @@ class DistributedLock(object):
 
         if targetID is not None:
             try:
+                self.clean_token()
                 self.state = NO_TOKEN
                 self.peer_list.get_peers()[pid].obtain_token(self.token)
             except Exception as e:
