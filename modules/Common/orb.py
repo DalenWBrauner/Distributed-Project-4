@@ -7,6 +7,7 @@
 # Copyright 2012 Linkoping University
 # -----------------------------------------------------------------------------
 
+import sys
 import threading
 import socket
 import json
@@ -259,3 +260,56 @@ class Peer(object):
         """Someone is checking to see if I'm still alive."""
         logging.debug("Someone wants to know I'm still alive. Responding with {}".format((self.id, self.type)))
         return (self.id, self.type)
+
+# Liveness Checking
+# (Really doesn't need to belong to any object in particular)
+
+def checkLiveness(pID, pStub, obj_type, timeout=5):
+    """ Used to detect if a peer is still alive. """
+    logging.debug("Confirming conneciton to peer {}.".format(pID))
+    try:
+        parent_conn, child_conn = multiprocessing.Pipe(duplex=False)
+        p = multiprocessing.Process(
+            target=_get_line,
+            args=(child_conn, pID, pStub, obj_type)
+        )
+        p.daemon = True
+        p.start()
+        it_did_timeout = (not parent_conn.poll(timeout))
+        if it_did_timeout:
+            logging.info("Connection to peer {} timed out.".format(pID))
+            return False
+        else:
+            parent_said_yes = parent_conn.recv()
+            if not parent_said_yes:
+                logging.info("No connection to peer {} established.".format(pID))
+            return parent_said_yes
+    except:
+        err = sys.exc_info()
+        logging.debug("Encountered an error while spawning a process to check if peer {} is still alive:\n{}: {}"
+                      .format(pID, err[0], err[1]))
+        return False
+
+def _get_line(conn, pID, pStub, obj_type):
+    """ Helper function for checkLiveness(). """
+    result = False
+    try:
+        expected = [pID, obj_type]
+        response = pStub.isAlive()
+        result = (response == expected)
+        logging.debug("PeerList received response {} from peer {}".format(response, pID))
+        if result is True:
+            logging.debug("This was the expected response.")
+        else:
+            logging.debug("This was not the expected response.\n Expected response: {}"
+                          .format(expected))
+    except ConnectionRefusedError:
+        logging.info("Peer {} refused connection".format(pID))
+        result = False
+    except:
+        err = sys.exc_info()
+        logging.debug("Encountered an error trying to check if peer {} is still alive:\n{}: {}"
+                     .format(pID, err[0], err[1]))
+    finally:
+        conn.send(result)
+

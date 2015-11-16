@@ -56,6 +56,8 @@ class NameServer(object):
     # Public methods
 
     def register(self, obj_type, address):
+        self._check_all_alive(obj_type) # Make sure everyone in our group is still alive
+        
         address = tuple(address)    # The address might come in as a list.
         logging.debug("NameServer registering peer at {}".format(address))
         

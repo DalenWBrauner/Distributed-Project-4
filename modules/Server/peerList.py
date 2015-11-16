@@ -10,8 +10,12 @@
 """Package for handling a list of objects of the same type as a given one."""
 
 import threading
+import copy
+import logging
 from Common import orb
 
+logging.basicConfig(format="%(levelname)s:%(filename)s: %(message)s",
+                    level=logging.INFO)
 
 class PeerList(object):
 
@@ -64,6 +68,9 @@ class PeerList(object):
     def destroy(self):
         """Unregister this peer from all others in the list."""
         print("{}.destory()".format(self.owner.id))
+
+        # If we tell a dead peer to unregister us, we'll crash
+        self.check_all_alive()
 
         self.lock.acquire()
         try:
@@ -134,3 +141,13 @@ class PeerList(object):
             return self.peers
         finally:
             self.lock.release()
+
+    def check_all_alive(self):
+        logging.info("PeerList confirming connections to all peers.")
+        allPeers = self.get_peers()
+        myself = self.owner.id
+        for pID in list(allPeers.keys()):
+            if pID != myself:
+                alive = orb.checkLiveness(pID, allPeers[pID], self.owner.type)
+                if not alive:
+                    self.unregister_peer(pID)
