@@ -150,7 +150,7 @@ class PeerList(object):
         alive = orb.checkLiveness(pID, self.get_peer(pID), self.owner.type)
         if not alive:
             logging.debug("Confirmed {} is not alive.".format(pID))
-            self.unregister_peer(pID)
+            self.owner.unregister_peer(pID)
 
     def check_all_alive(self):
         """ Checks whether any peer has disconnected without telling us. """
@@ -162,4 +162,4 @@ class PeerList(object):
                 alive = orb.checkLiveness(pID, allPeers[pID], self.owner.type)
                 if not alive:
                     logging.debug("Confirmed {} is not alive.".format(pID))
-                    self.unregister_peer(pID)
+                    self.owner.unregister_peer(pID)
