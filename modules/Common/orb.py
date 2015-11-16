@@ -7,6 +7,7 @@
 # Copyright 2012 Linkoping University
 # -----------------------------------------------------------------------------
 
+import multiprocessing.dummy as multiprocessing
 import sys
 import threading
 import socket
@@ -32,7 +33,7 @@ objects that communicate via networks. This infrastructure consists of:
         remote objects should extend this class.
 """
 
-log = logging
+log = logging # Pretty sure I can remove this
 
 class ComunicationError(Exception):
     pass
@@ -266,7 +267,7 @@ class Peer(object):
 
 def checkLiveness(pID, pStub, obj_type, timeout=5):
     """ Used to detect if a peer is still alive. """
-    logging.debug("Confirming conneciton to peer {}.".format(pID))
+    logging.debug("Confirming connection to peer {}.".format(pID))
     try:
         parent_conn, child_conn = multiprocessing.Pipe(duplex=False)
         p = multiprocessing.Process(

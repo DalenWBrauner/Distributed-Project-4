@@ -62,13 +62,11 @@ class PeerList(object):
         # Then register itself with each peer registered
         for peer_tuple in peer_set:
             peer_id, peer_addr = peer_tuple
-            self.register_peer(peer_id, peer_addr)
+            self.register_peer(peer_id, peer_addr, False)
             self.peers[peer_id].register_peer(self.owner.id, self.owner.address)
 
     def destroy(self):
         """Unregister this peer from all others in the list."""
-        print("{}.destory()".format(self.owner.id))
-
         # If we tell a dead peer to unregister us, we'll crash
         self.check_all_alive()
 
@@ -77,21 +75,21 @@ class PeerList(object):
             myself = self.owner.id
             # Ask all the other peers to deregister us
             for fellowPeer in self.peers.keys():
-                print("for {} in self.peers.keys()".format(fellowPeer))
                 if fellowPeer != myself:
                     self.peers[fellowPeer].unregister_peer(self.owner.id)
         finally:
             self.lock.release()
 
-    def register_peer(self, pid, paddr):
+    def register_peer(self, pid, paddr, doubleCheck=True):
         """Register a new peer joining the network."""
+        if doubleCheck:
+            self.check_all_alive()
 
         # Synchronize access to the peer list as several peers might call
         # this method in parallel.
         self.lock.acquire()
         try:
             self.peers[pid] = orb.Stub(paddr)
-            print("Peer {} has joined the system.".format(pid))
         finally:
             self.lock.release()
 
@@ -99,17 +97,19 @@ class PeerList(object):
         """Unregister a peer leaving the network."""
         # Synchronize access to the peer list as several peers might call
         # this method in parallel.
-        print("{}.unregister_peer({})".format(self.owner.id,pid))
 
         self.lock.acquire()
         try:
             if pid in self.peers:
                 del self.peers[pid]
-                print("Peer {} has left the system.".format(pid))
+                logging.info("The connection to Peer {} was closed.".format(pid))
             else:
                 raise Exception("No peer with id: '{}'".format(pid))
         finally:
             self.lock.release()
+
+        # Ought to be up-to-date.
+        self.check_all_alive()
 
     def display_peers(self):
         """Display all the peers in the list."""
@@ -143,11 +143,12 @@ class PeerList(object):
             self.lock.release()
 
     def check_all_alive(self):
-        logging.info("PeerList confirming connections to all peers.")
+        logging.debug("PeerList confirming connections to all peers.")
         allPeers = self.get_peers()
         myself = self.owner.id
         for pID in list(allPeers.keys()):
             if pID != myself:
                 alive = orb.checkLiveness(pID, allPeers[pID], self.owner.type)
                 if not alive:
+                    logging.debug("Confirmed {} is not alive.".format(pID))
                     self.unregister_peer(pID)
