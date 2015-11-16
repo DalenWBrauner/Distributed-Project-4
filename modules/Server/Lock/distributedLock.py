@@ -154,10 +154,13 @@ class DistributedLock(object):
         """Called when this object releases the lock."""
         print("distributedLock.release()".format())
         
-        self.state = TOKEN_PRESENT
+        if self.state is TOKEN_HELD:
+            self.state = TOKEN_PRESENT
 
-        # Safely initiate token transfer if possible
-        self._check_token()
+            # Safely initiate token transfer if possible
+            self._check_token()
+        else:
+            print("Warning: release() called when lock not in state TOKEN_HELD")
 
 
     def request_token(self, time, pid):
