@@ -62,10 +62,11 @@ class PeerList(object):
         # Then register itself with each peer registered
         for peer_tuple in peer_set:
             peer_id, peer_addr = peer_tuple
-            self.register_peer(peer_id, peer_addr,
-            # We're just spawning, we don't need to check if they've died
-                               False) 
-            self.peers[peer_id].register_peer(self.owner.id, self.owner.address)
+            if peer_id != self.owner.id:
+                self.register_peer(peer_id, peer_addr,
+                # We're just spawning, we don't need to check if they've died
+                                   False) 
+                self.peers[peer_id].register_peer(self.owner.id, self.owner.address)
 
     def destroy(self):
         """Unregister this peer from all others in the list."""
@@ -74,11 +75,9 @@ class PeerList(object):
 
         self.lock.acquire()
         try:
-            myself = self.owner.id
             # Ask all the other peers to deregister us
             for fellowPeer in self.peers.keys():
-                if fellowPeer != myself:
-                    self.peers[fellowPeer].unregister_peer(self.owner.id)
+                self.peers[fellowPeer].unregister_peer(self.owner.id)
         finally:
             self.lock.release()
 
@@ -156,10 +155,8 @@ class PeerList(object):
         """ Checks whether any peer has disconnected without telling us. """
         logging.debug("PeerList confirming connections to all peers.")
         allPeers = self.get_peers()
-        myself = self.owner.id
         for pID in list(allPeers.keys()):
-            if pID != myself:
-                alive = orb.checkLiveness(pID, allPeers[pID], self.owner.type)
-                if not alive:
-                    logging.debug("Confirmed {} is not alive.".format(pID))
-                    self.owner.unregister_peer(pID)
+            alive = orb.checkLiveness(pID, allPeers[pID], self.owner.type)
+            if not alive:
+                logging.debug("Confirmed {} is not alive.".format(pID))
+                self.owner.unregister_peer(pID)
