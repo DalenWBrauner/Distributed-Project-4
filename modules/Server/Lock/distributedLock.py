@@ -140,6 +140,8 @@ class DistributedLock(object):
         # Increment our local timer
         self.time+=1
 
+        self.request[self.id]=self.time
+
         for peer in self.peer_list.get_peers().values():
             peer.request_token(self.time,self.owner.id)
 
@@ -190,10 +192,17 @@ class DistributedLock(object):
         
         self.token = token
 
+        # Assume we're getting the token in response to our request
+        # if we've asked for it since we last held it.
+        tokenWasWanted = self.request[self.owner.id] > self.token[self.owner.id]:
+
         # Update the token's last-held timestamp for this client
-        self.token[self.owner.id] = self.time # TODO make sure time is increasing
+        self.token[self.owner.id] = self.time
 
         self.state = TOKEN_HELD
+
+        if not tokenWasWanted:
+            self.release()
 
 
     def _check_token(self,force=False):
