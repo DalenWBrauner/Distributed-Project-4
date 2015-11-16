@@ -29,6 +29,7 @@ The implementation should satisfy the following requests:
 """
 
 from threading import Lock
+import time
 
 NO_TOKEN = 0
 TOKEN_PRESENT = 1
@@ -209,7 +210,7 @@ class DistributedLock(object):
         targetID = None
 
         # If we don't have the token or we are using it right now, we can just stop here
-        if self.state == TOKEN_PRESENT and self.token[pid] < self.request[pid]:
+        if self.state == TOKEN_PRESENT:
             peer_ids = request.keys()
             gt = sorted([pid for pid in peer_ids if pid > self.owner.id])
             lt = sorted([pid for pid in peer_ids if pid < self.owner.id])
