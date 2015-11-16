@@ -186,7 +186,7 @@ class Skeleton(threading.Thread):
                 try:
                     conn, addr = listener.accept()
                     req = Request(self.owner, conn, addr)
-                    logging.info("Serving a request from {0}".format(addr))
+                    logging.debug("Serving a request from {0}".format(addr))
                     req.start()
                 except socket.error as socket_error:
                     logging.debug(socket_error)

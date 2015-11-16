@@ -58,8 +58,8 @@ class DistributedLock(object):
         self.peer_list = peer_list
         self.owner = owner
         self.time = 0
-        self.token = None
-        self.request = {}
+        self.token = dict()
+        self.request = dict()
         self.state = NO_TOKEN
         self.localLock = Lock()
 
@@ -93,7 +93,6 @@ class DistributedLock(object):
         print("distributedLock.initialize()")
 
         # Initialize the token
-        self.token = dict()
         peerIDs = self.peer_list.get_peers().keys()
         for ID in peerIDs:
             self.token[ID] = 0
@@ -107,7 +106,6 @@ class DistributedLock(object):
 
         """
         print("distributedLock.destroy()")
-        print("I'm leaving...")
         #
         # Your code here.
         #
@@ -116,14 +114,12 @@ class DistributedLock(object):
     def register_peer(self, pID):
         """Called when a new peer joins the system."""
         print("distributedLock.register_peer({})".format(pID))
-        print("Someone's connecting...")
         self.token[pID] = 0
         self.request[pID] = 0
 
     def unregister_peer(self, pID):
         """Called when a peer leaves the system."""
         print("distributedLock.unregister_peer({})".format(pID))
-        print("Someone's leaving...")
         del self.token[pID]
         del self.request[pID]
 
@@ -140,7 +136,6 @@ class DistributedLock(object):
     def acquire(self):
         """Called when this object tries to acquire the lock."""
         print("distributedLock.acquire()".format())
-        print("Trying to acquire the lock...")
 
         # Increment our local timer
         self.time+=1
@@ -156,7 +151,6 @@ class DistributedLock(object):
     def release(self):
         """Called when this object releases the lock."""
         print("distributedLock.release()".format())
-        print("Releasing the lock...")
         
         self.state = TOKEN_PRESENT
 
@@ -185,10 +179,9 @@ class DistributedLock(object):
     def obtain_token(self, token):
         """Called when some other object is giving us the token."""
         print("distributedLock.obtain_token({})".format(token))
-        print("Receiving the token...")
 
         if self.state is not NO_TOKEN:
-            print "WARNING: peer {} has received a token when it already had one".format(self.owner.id)
+            print("WARNING: peer {} has received a token when it already had one".format(self.owner.id))
         
         self.token = token
 
@@ -226,8 +219,8 @@ class DistributedLock(object):
                 self.state = NO_TOKEN
                 self.owner.peer_list[pid].obtain_token(self.token)
             except Exception as e:
-                print "ERROR: Could not send token to pid",pid
-                print e
+                print("ERROR: Could not send token to pid",pid)
+                print(e)
 
         self.localLock.release()
 
