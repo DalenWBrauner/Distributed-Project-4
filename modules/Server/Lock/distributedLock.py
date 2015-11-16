@@ -110,9 +110,7 @@ class DistributedLock(object):
 
         """
         print("distributedLock.destroy()")
-        #
-        # Your code here.
-        #
+        self._check_token(True)
         
 
     def register_peer(self, pID):
