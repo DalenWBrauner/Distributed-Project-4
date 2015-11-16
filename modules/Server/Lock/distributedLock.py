@@ -196,7 +196,7 @@ class DistributedLock(object):
         self.state = TOKEN_HELD
 
 
-    def _check_token(self):
+    def _check_token(self,force=False):
         """Called when this object checks its set of token requests in order
         to find a peer that should get the token"""
         print("distributedLock._check_token()")
@@ -218,6 +218,16 @@ class DistributedLock(object):
                 if pid in self.token and self.request[pid] > self.token[pid]:
                     targetID = pid
                     break
+
+            # If this peer is closing and we have to get rid of the token, send it to
+            # the first available peer
+            if force:
+                if len(gt)>0:
+                    targetID = gt[0]
+                elif len(lt)>0:
+                    targetID = lt[0]
+                else:
+                    print("WARNING: Unable to pass token with force=True")
 
         if targetID is not None:
             try:
