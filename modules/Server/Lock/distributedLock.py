@@ -90,11 +90,13 @@ class DistributedLock(object):
 
         """
         print("distributedLock.initialize()")
-##        self.token = dict()
-##        peerIDs = self.peer_list.get_peers().keys()
-##        for ID in peerIDs:
-##            self.token[ID] = 0
-        
+
+        # Initialize the token
+        self.token = dict()
+        peerIDs = self.peer_list.get_peers().keys()
+        for ID in peerIDs:
+            self.token[ID] = 0
+            self.request[ID] = 0
 
     def destroy(self):
         """ The object is being destroyed.
@@ -110,23 +112,19 @@ class DistributedLock(object):
         #
         
 
-    def register_peer(self, pid):
+    def register_peer(self, pID):
         """Called when a new peer joins the system."""
-        print("distributedLock.register_peer({})".format(pid))
+        print("distributedLock.register_peer({})".format(pID))
         print("Someone's connecting...")
-        #
-        # Your code here.
-        #
-        
+        self.token[pID] = 0
+        self.request[pID] = 0
 
-    def unregister_peer(self, pid):
+    def unregister_peer(self, pID):
         """Called when a peer leaves the system."""
-        print("distributedLock.unregister_peer({})".format(pid))
+        print("distributedLock.unregister_peer({})".format(pID))
         print("Someone's leaving...")
-        #
-        # Your code here.
-        #
-
+        del self.token[pID]
+        del self.request[pID]
 
     """
         Acquisition scheme:
