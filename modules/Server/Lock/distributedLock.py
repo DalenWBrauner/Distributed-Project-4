@@ -30,7 +30,7 @@ The implementation should satisfy the following requests:
 
 from threading import Lock
 import time
-from collection import Counter
+from collections import Counter
 
 NO_TOKEN = 0
 TOKEN_PRESENT = 1
@@ -59,10 +59,20 @@ class DistributedLock(object):
         self.peer_list = peer_list
         self.owner = owner
         self.time = 0
-        self.token = counter()
-        self.request = dict()
         self.state = NO_TOKEN
         self.localLock = Lock()
+
+        # WARNING:
+        # DO NOT DEPEND ON THESE COUNTERS FOR LOOPING, instead
+        # use self.peer_list to get a full list of connected peers.
+        self.token = Counter()
+        self.request = Counter()
+        # You cannot loop through their keys and expect them to contain
+        # each and every peer. As counters, it is the case that there
+        # could be some peers whose values are 0 and are NOT explicitly
+        # listed in the counter. It is also the case that there could be
+        # some peers whose values are 0 and ARE explicitly listed.
+        # Do not ever depend on one case or the other.
 
     def _prepare(self, token):
         """Prepare the token to be sent as a JSON message.
@@ -75,7 +85,7 @@ class DistributedLock(object):
 
     def _unprepare(self, token):
         """The reverse operation to the one above."""
-        return counter(token)
+        return Counter(token)
 
     # Public methods
 
@@ -93,17 +103,8 @@ class DistributedLock(object):
         """
         print("distributedLock.initialize()")
 
-        # Initialize ourselves
-        self.token[self.owner.id] = 0
-        self.request[self.owner.id] = 0
-
-        # Initialize our peers
-        peerIDs = self.peer_list.get_peers().keys()
-        for ID in peerIDs:
-            self.token[ID] = 0
-            self.request[ID] = 0
-
         # If I don't have any peers, spawn with a token!
+        peerIDs = self.peer_list.get_peers()
         if len(peerIDs) == 0:
             self.state = TOKEN_PRESENT
 
@@ -116,18 +117,21 @@ class DistributedLock(object):
         """
         print("distributedLock.destroy()")
         self._check_token(True)
-        
 
     def register_peer(self, pID):
         """Called when a new peer joins the system."""
-        print("distributedLock.register_peer({})".format(pID))
-        self.token[pID] = 0
-        self.request[pID] = 0
+        #print("distributedLock.register_peer({})".format(pID))
+        # We don't need to do anything because our token and requests
+        # are both counters, so their values are alreadt at 0 implicitly
+        pass
 
     def unregister_peer(self, pID):
         """Called when a peer leaves the system."""
-        print("distributedLock.unregister_peer({})".format(pID))
-        del self.token[pID]
+        #print("distributedLock.unregister_peer({})".format(pID))
+        # We don't need to delete from the token,
+        # that's _clean_token's job
+        # PLUS, it's possible the peerlists on either side could change
+        # while the token is in-flight.
         del self.request[pID]
 
     """
@@ -147,7 +151,7 @@ class DistributedLock(object):
         # Increment our local timer
         self.time+=1
 
-        self.request[self.id]=self.time
+        self.request[self.owner.id]=self.time
 
         for peer in self.peer_list.get_peers().values():
             peer.request_token(self.time,self.owner.id)
@@ -201,7 +205,7 @@ class DistributedLock(object):
 
         # Assume we're getting the token in response to our request
         # if we've asked for it since we last held it.
-        tokenWasWanted = self.request[self.owner.id] > self.token[self.owner.id]:
+        tokenWasWanted = self.request[self.owner.id] > self.token[self.owner.id]
 
         # Update the token's last-held timestamp for this client
         self.token[self.owner.id] = self.time
@@ -215,8 +219,9 @@ class DistributedLock(object):
         """Called when sending a token to clear out old records from peers that are no longer"""
         print("distributedLoc._clean_token()")
         self.peer_list.lock.acquire()
+        allPeers = self.peer_list.get_peers()
         for pid in self.token:
-            if pid not in self.peer_list.get_peers():
+            if pid not in allPeers:
                 del self.token[pid]
         self.peer_list.lock.release()
 
@@ -256,7 +261,7 @@ class DistributedLock(object):
 
         if targetID is not None:
             try:
-                self.clean_token()
+                self._clean_token()
                 self.state = NO_TOKEN
                 self.peer_list.get_peers()[pid].obtain_token(self.token)
             except Exception as e:
