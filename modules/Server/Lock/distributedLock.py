@@ -214,7 +214,8 @@ class DistributedLock(object):
         if self.state is not NO_TOKEN:
             print("WARNING: peer {} has received a token when it already had one".format(self.owner.id))
         
-        self.token = Counter(token) # Occasionally we receive dict()s for some reason
+        # Convert all peer IDs in the token from string to int; cast to Counter
+        self.token = Counter({int(k): token[k] for k in token})
 
         # Assume we're getting the token in response to our request
         # if we've asked for it since we last held it.
@@ -224,19 +225,21 @@ class DistributedLock(object):
         self.token[self.owner.id] = self.time
 
         self.state = TOKEN_HELD
-        
+
         if not tokenWasWanted:
             self.release()
 
     def _clean_token(self):
-        """Called when sending a token to clear out old records from peers that are no longer"""
+        """Called when sending a token to clear out old records from peers that have disconnected"""
         print("distributedLock._clean_token()")
         self.peer_list.lock.acquire()
         allPeers = self.peer_list.get_peers()
-        for pid in list(self.token.keys()):
-            if pid not in allPeers:
-                del self.token[pid]
+
+        # Discard any unknown peer entries in the token
+        self.token = Counter({pid: self.token[pid] for pid in self.token if pid == self.owner.id or pid in allPeers})
+        
         self.peer_list.lock.release()
+
 
 
     def _check_token(self,force=False):
