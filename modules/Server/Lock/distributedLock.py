@@ -116,7 +116,7 @@ class DistributedLock(object):
 
         """
         print("distributedLock.destroy()")
-        self._check_token(True)
+        self._offload_token()
 
     def register_peer(self, pID):
         """Called when a new peer joins the system."""
@@ -233,58 +233,88 @@ class DistributedLock(object):
         """Called when sending a token to clear out old records from peers that have disconnected"""
         print("distributedLock._clean_token()")
         self.peer_list.lock.acquire()
-        allPeers = self.peer_list.get_peers()
+        all_peers = self.peer_list.get_peers()
 
         # Discard any unknown peer entries in the token
-        self.token = Counter({pid: self.token[pid] for pid in self.token if pid == self.owner.id or pid in allPeers})
+        self.token = Counter({pid: self.token[pid] for pid in self.token if pid == self.owner.id or pid in all_peers})
         
         self.peer_list.lock.release()
 
-
-
-    def _check_token(self,force=False):
+    def _check_token(self):
         """Called when this object checks its set of token requests in order
         to find a peer that should get the token"""
         print("distributedLock._check_token()")
+
+        # If we don't have the token or we are using it right now, we can just stop here
+        if self.state is not TOKEN_PRESENT:
+            print("WARNING: _check_token called when in not in state TOKEN_PRESENT")
+            return False
 
         # Use Python's built-in locking (like Java's semaphore) to prevent
         # more than one of these checks from being run concurrently
         self.localLock.acquire()
 
         targetID = None
+        wasSent = False
 
-        # If we don't have the token or we are using it right now, we can just stop here
-        if self.state == TOKEN_PRESENT:
-            peer_ids = self.request.keys()
-            gt = sorted([pid for pid in peer_ids if pid > self.owner.id])
-            lt = sorted([pid for pid in peer_ids if pid < self.owner.id])
+        requester_ids = self.request.keys()
+        
+        gt = sorted([pid for pid in requester_ids if pid > self.owner.id])
+        lt = sorted([pid for pid in requester_ids if pid < self.owner.id])
 
-            # Check each peer in clockwise order to see if anyone wants the token
-            for pid in gt + lt:
-                if self.request[pid] > self.token[pid]:
-                    targetID = pid
-                    break
-
-            # If this peer is closing and we have to get rid of the token, send it to
-            # the first available peer
-            if force:
-                if len(gt)>0:
-                    targetID = gt[0]
-                elif len(lt)>0:
-                    targetID = lt[0]
-                else:
-                    print("WARNING: Unable to pass token with force=True")
+        # Check each peer in clockwise order to see if anyone wants the token
+        for pid in gt + lt:
+            if self.request[pid] > self.token[pid]:
+                targetID = pid
+                break
 
         if targetID is not None:
             try:
                 self._clean_token()
                 self.state = NO_TOKEN
                 self.peer_list.get_peers()[pid].obtain_token(self.token)
+                wasSent = True
             except Exception as e:
                 print("ERROR: Could not send token to pid",pid)
                 print(e)
 
         self.localLock.release()
+
+        return(wasSent)
+
+    def _offload_token(self):
+        """Called when this object needs to send its token to another peer immediately"""
+        print("distributedLock._offload_token()")
+
+        wasSent = False
+
+        if self.state is not TOKEN_PRESENT:
+            print("WARNING: _offload_token called when in not in state TOKEN_PRESENT")
+            return(False)
+
+        # First, try sending the token normally
+        if self._check_token():
+            print("Successfully sent token to a peer that had requested it")
+            return(True)
+
+        self.localLock.acquire()
+        self._clean_token()
+
+        # Try sending the token to everybody on our peer list
+        all_peers = self.peer_list.get_peers()
+        for pid in all_peers:
+            try:
+                self.state = NO_TOKEN
+                all_peers[pid].obtain_token(self.token)
+                wasSent = True
+                break
+            except Exception as e:
+                print("ERROR: Could not forcibly send token to pid {}:".format(pid))
+                print(e)
+
+        self.localLock.release()
+
+        return(wasSent)
 
     def display_status(self):
         """Print the status of this peer."""
