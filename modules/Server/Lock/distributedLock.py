@@ -161,6 +161,7 @@ class DistributedLock(object):
             print("acquire() has received acknowledgements from all peers")
 
             # If we acquired the token while requesting, this will pass immediately
+            print("Status is {}. Waiting for token...".format(self.state))
             while self.state == NO_TOKEN:
                 time.sleep(1)
 
@@ -223,13 +224,13 @@ class DistributedLock(object):
         self.token[self.owner.id] = self.time
 
         self.state = TOKEN_HELD
-
+        
         if not tokenWasWanted:
             self.release()
 
     def _clean_token(self):
         """Called when sending a token to clear out old records from peers that are no longer"""
-        print("distributedLoc._clean_token()")
+        print("distributedLock._clean_token()")
         self.peer_list.lock.acquire()
         allPeers = self.peer_list.get_peers()
         for pid in list(self.token.keys()):
