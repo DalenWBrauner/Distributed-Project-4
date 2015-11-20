@@ -162,6 +162,7 @@ class DistributedLock(object):
 
             # If we acquired the token while requesting, this will pass immediately
             while self.state == NO_TOKEN:
+                print("Status is {}. Waiting...".format(self.state))
                 time.sleep(1)
 
         # If we do have the token, we can just silently acquire it
@@ -213,7 +214,7 @@ class DistributedLock(object):
         if self.state is not NO_TOKEN:
             print("WARNING: peer {} has received a token when it already had one".format(self.owner.id))
         
-        self.token = token
+        self.token = Counter(token)
 
         # Assume we're getting the token in response to our request
         # if we've asked for it since we last held it.
@@ -223,13 +224,13 @@ class DistributedLock(object):
         self.token[self.owner.id] = self.time
 
         self.state = TOKEN_HELD
-
+        
         if not tokenWasWanted:
             self.release()
 
     def _clean_token(self):
         """Called when sending a token to clear out old records from peers that are no longer"""
-        print("distributedLoc._clean_token()")
+        print("distributedLock._clean_token()")
         self.peer_list.lock.acquire()
         allPeers = self.peer_list.get_peers()
         for pid in self.token:
@@ -257,7 +258,9 @@ class DistributedLock(object):
 
             # Check each peer in clockwise order to see if anyone wants the token
             for pid in gt + lt:
-                if pid in self.token and self.request[pid] > self.token[pid]:
+                print("Checking peer ID {} with request time {} and token time {}.".format(pid,self.request[pid],self.token[pid]))
+                if self.request[pid] > self.token[pid]:
+                    print("\tIdentified target: {}".format(pid))
                     targetID = pid
                     break
 
