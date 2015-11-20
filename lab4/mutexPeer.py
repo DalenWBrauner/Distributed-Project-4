@@ -108,10 +108,11 @@ def main():
 # -----------------------------------------------------------------------------
 
     command = ""
-    cursor = "{}({}):{}> ".format(p.type, p.id, "RELEASED")
+    cursor = "{}({}):{}> ".format(p.type, p.id, displayState(p))
     menu()
     while command != "q":
         try:
+            cursor = "{}({}):{}> ".format(p.type, p.id, displayState(p))
             sys.stdout.write(cursor)
             command = input()
             if command == "l":
@@ -120,10 +121,8 @@ def main():
                 p.display_status()
             elif command == "a":
                 p.acquire()
-                cursor = "{}({}):{}> ".format(p.type, p.id, "LOCKED")
             elif command == "r":
                 p.release()
-                cursor = "{}({}):{}> ".format(p.type, p.id, "RELEASED")
             elif command == "h":
                 menu()
         except KeyboardInterrupt:
@@ -134,6 +133,20 @@ def main():
 
     # Kill our peer object.
     p.destroy()
+
+def displayState(peer):
+    #NO_TOKEN = 0
+    #TOKEN_PRESENT = 1
+    #TOKEN_HELD = 2
+    state = peer.distributed_lock.get_state()
+    if state == 0:
+        return("NO_TOKEN")
+    elif state == 1:
+        return("TOKEN_PRESENT")
+    elif state == 2:
+        return("TOKEN_WITHHELD")
+    else:
+        return("BUT WHERE'S THE CAVEMAN? (SOMETHING WENT WRONG)")
 
 def menu():
     print("""\

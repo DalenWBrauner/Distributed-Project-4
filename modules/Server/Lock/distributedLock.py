@@ -298,3 +298,6 @@ class DistributedLock(object):
             print("Time    :: {0}".format(self.time))
         finally:
             self.localLock.release()
+
+    def get_state(self):
+        return self.state
