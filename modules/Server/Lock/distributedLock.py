@@ -148,19 +148,31 @@ class DistributedLock(object):
         """Called when this object tries to acquire the lock."""
         print("distributedLock.acquire()".format())
 
-        # Increment our local timer
-        self.time+=1
+        # If we don't have the token, ask everyone for it
+        if self.state == NO_TOKEN:
+            # Increment our local timer
+            self.time+=1
 
-        self.request[self.owner.id]=self.time
+            self.request[self.owner.id]=self.time
 
-        for peer in self.peer_list.get_peers().values():
-            peer.request_token(self.time,self.owner.id)
+            for peer in self.peer_list.get_peers().values():
+                peer.request_token(self.time,self.owner.id)
 
-        print("acquire() has received acknowledgements from all peers")
+            print("acquire() has received acknowledgements from all peers")
 
-        # If we acquired the token while requesting, this will pass immediately
-        while self.state == NO_TOKEN:
-            time.sleep(1)
+            # If we acquired the token while requesting, this will pass immediately
+            while self.state == NO_TOKEN:
+                time.sleep(1)
+
+        # If we do have the token, we can just silently acquire it
+        # If we have it but someone else asked for it, this should be
+        # taken care of already; no one should have the opportunity to
+        # decide to use their token when they know that someone else has
+        # already asked them for it.
+        elif self.state == TOKEN_PRESENT:
+            self.state = TOKEN_HELD
+        else:
+            print("I've already locked the token!")
 
 
     def release(self):
