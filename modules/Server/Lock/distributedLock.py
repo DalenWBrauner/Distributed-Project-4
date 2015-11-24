@@ -185,7 +185,8 @@ class DistributedLock(object):
         """Called when some other object requests the token from us."""
 
         # Update this client's last-requested timestamp for the other client
-        self.request[pid]=time
+        # We want the max timestamp in case messages are somehow sent out-of-order.
+        self.request[pid] = max(self.request[pid], time)
 
         if self.state == TOKEN_PRESENT and self.token[pid] < self.request[pid]:
             # Safely initiate token transfer
@@ -235,7 +236,7 @@ class DistributedLock(object):
         # If we don't have the token or we are using it right now, we can just stop here
         if self.state is not TOKEN_PRESENT:
             print("WARNING: _check_token called when in not in state TOKEN_PRESENT")
-            return False
+            if self.state is NO_TOKEN: return False
 
         # Use Python's built-in locking (like Java's semaphore) to prevent
         # more than one of these checks from being run concurrently
@@ -275,12 +276,12 @@ class DistributedLock(object):
 
         if self.state is not TOKEN_PRESENT:
             print("WARNING: _offload_token called when in not in state TOKEN_PRESENT")
-            if self.state is NO_TOKEN: return(False)
+            if self.state is NO_TOKEN: return False
 
         # First, try sending the token normally
         if self._check_token():
             print("Successfully sent token to a peer that had requested it")
-            return(True)
+            return True
 
         self.localLock.acquire()
         self._clean_token()
