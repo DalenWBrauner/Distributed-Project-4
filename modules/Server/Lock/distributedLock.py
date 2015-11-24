@@ -101,7 +101,6 @@ class DistributedLock(object):
         function is called.
 
         """
-        print("distributedLock.initialize()")
 
         # If I don't have any peers, spawn with a token!
         peerIDs = self.peer_list.get_peers()
@@ -115,19 +114,16 @@ class DistributedLock(object):
         give it to someone else.
 
         """
-        print("distributedLock.destroy()")
         self._offload_token()
 
     def register_peer(self, pID):
         """Called when a new peer joins the system."""
-        #print("distributedLock.register_peer({})".format(pID))
         # We don't need to do anything because our token and requests
         # are both counters, so their values are alreadt at 0 implicitly
         pass
 
     def unregister_peer(self, pID):
         """Called when a peer leaves the system."""
-        #print("distributedLock.unregister_peer({})".format(pID))
         # We don't need to delete from the token,
         # that's _clean_token's job
         # PLUS, it's possible the peerlists on either side could change
@@ -146,7 +142,6 @@ class DistributedLock(object):
 
     def acquire(self):
         """Called when this object tries to acquire the lock."""
-        print("distributedLock.acquire()".format())
 
         # If we don't have the token, ask everyone for it
         if self.state == NO_TOKEN:
@@ -157,8 +152,6 @@ class DistributedLock(object):
 
             for peer in self.peer_list.get_peers().values():
                 peer.request_token(self.time,self.owner.id)
-
-            print("acquire() has received acknowledgements from all peers")
 
             # If we acquired the token while requesting, this will pass immediately
             print("Status is {}. Waiting for token...".format(self.state))
@@ -178,7 +171,6 @@ class DistributedLock(object):
 
     def release(self):
         """Called when this object releases the lock."""
-        print("distributedLock.release()".format())
         
         if self.state is TOKEN_HELD:
             self.state = TOKEN_PRESENT
@@ -191,7 +183,6 @@ class DistributedLock(object):
 
     def request_token(self, time, pid):
         """Called when some other object requests the token from us."""
-        print("distributedLock.request_token({}, {})".format(time, pid))
 
         # Update this client's last-requested timestamp for the other client
         self.request[pid]=time
@@ -209,7 +200,6 @@ class DistributedLock(object):
 
     def obtain_token(self, token):
         """Called when some other object is giving us the token."""
-        print("distributedLock.obtain_token({})".format(token))
 
         if self.state is not NO_TOKEN:
             print("WARNING: peer {} has received a token when it already had one".format(self.owner.id))
@@ -231,19 +221,16 @@ class DistributedLock(object):
 
     def _clean_token(self):
         """Called when sending a token to clear out old records from peers that have disconnected"""
-        print("distributedLock._clean_token()")
         self.peer_list.lock.acquire()
         all_peers = self.peer_list.get_peers()
 
         # Discard any unknown peer entries in the token
         self.token = Counter({pid: self.token[pid] for pid in self.token if pid == self.owner.id or pid in all_peers})
-        
         self.peer_list.lock.release()
 
     def _check_token(self):
         """Called when this object checks its set of token requests in order
         to find a peer that should get the token"""
-        print("distributedLock._check_token()")
 
         # If we don't have the token or we are using it right now, we can just stop here
         if self.state is not TOKEN_PRESENT:
@@ -284,13 +271,11 @@ class DistributedLock(object):
 
     def _offload_token(self):
         """Called when this object needs to send its token to another peer immediately"""
-        print("distributedLock._offload_token()")
-
         wasSent = False
 
         if self.state is not TOKEN_PRESENT:
             print("WARNING: _offload_token called when in not in state TOKEN_PRESENT")
-            return(False)
+            if self.state is NO_TOKEN: return(False)
 
         # First, try sending the token normally
         if self._check_token():
